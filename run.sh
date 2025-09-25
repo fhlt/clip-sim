@@ -1,0 +1,1 @@
+python poc.py --csv_path data.csv --distributed --world_size 2
