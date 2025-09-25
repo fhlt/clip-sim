@@ -2,4 +2,5 @@
 *.jpg
 *.png
 __pycache__
-*.tar 
+*.tar
+data.csv 
