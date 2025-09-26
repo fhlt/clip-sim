@@ -236,21 +236,6 @@ python example_ddp.py
 3. **Distributed Training**: Use multiple GPUs with `--distributed` for large datasets
 4. **Data Loading**: Increase `--num_workers` for faster data loading
 
-## Troubleshooting
-
-### Common Issues
-
-1. **CUDA Out of Memory**: Reduce `--batch_size`
-2. **Download Failures**: Check network connectivity and increase `--timeout`
-3. **Distributed Training Issues**: Ensure all nodes can communicate and have the same data
-
-### Debug Mode
-
-Run with debug logging for detailed information:
-```bash
-python poc.py --csv_path data.csv --log_level DEBUG --verbose
-```
-
 ## License
 
 This project is licensed under the MIT License.
