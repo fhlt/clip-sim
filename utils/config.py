@@ -13,6 +13,7 @@ class Config:
         
         # Model settings
         self.model_name = "openai/clip-vit-base-patch32"
+        self.model_type = "clip"  # "clip" or "siglip"
         self.device = "cuda" if os.environ.get("CUDA_VISIBLE_DEVICES") else "cpu"
         
         # Download settings
@@ -71,7 +72,9 @@ def get_parser() -> argparse.ArgumentParser:
     
     # Model arguments
     parser.add_argument("--model_name", type=str, default="openai/clip-vit-base-patch32",
-                       help="CLIP model name")
+                       help="Model name (CLIP or SigLIP)")
+    parser.add_argument("--model_type", type=str, default="clip", choices=["clip", "siglip"],
+                       help="Model type: 'clip' or 'siglip'")
     parser.add_argument("--device", type=str, default=None,
                        help="Device to use (cuda/cpu)")
     

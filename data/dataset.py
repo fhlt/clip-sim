@@ -216,7 +216,6 @@ def run_distributed_worker(rank: int, world_size: int, config: Dict, image_paths
     """Worker function for distributed processing using torch.multiprocessing"""
     import logging
     from utils.logger import setup_logger
-    from models.clip_evaluator import CLIPSimilarityModel
     from utils.evaluator import SimilarityEvaluator
     
     # Setup logging for this process
@@ -236,8 +235,14 @@ def run_distributed_worker(rank: int, world_size: int, config: Dict, image_paths
         
         logger.info(f"Worker {rank} started on device {device}")
         
-        # Create model
-        model = CLIPSimilarityModel(device=device)
+        # Create model based on model type
+        model_type = config.get('model_type', 'clip').lower()
+        if model_type == "siglip":
+            from models.siglip_evaluator import SigLIPSimilarityModel
+            model = SigLIPSimilarityModel(device=device)
+        else:  # default to CLIP
+            from models.clip_evaluator import CLIPSimilarityModel
+            model = CLIPSimilarityModel(device=device)
         
         # Create data loader
         dataloader = create_dataloader(

@@ -27,6 +27,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from data.image_downloader import ImageDownloader
 from data.dataset import create_dataloader, load_data_from_csv, setup_ddp, cleanup_ddp, launch_distributed_training
 from models.clip_evaluator import CLIPSimilarityModel
+from models.siglip_evaluator import SigLIPSimilarityModel
 from utils.config import Config, get_parser
 from utils.logger import setup_logger
 from utils.evaluator import SimilarityEvaluator
@@ -92,10 +93,13 @@ def evaluate_similarities(
         device = config.device
         logger.info(f"Using device: {device}")
     
-    logger.info("Initializing CLIP model...")
+    logger.info(f"Initializing {config.model_type.upper()} model...")
     
-    # Initialize model on the appropriate device
-    model = CLIPSimilarityModel(device=device)
+    # Initialize model on the appropriate device based on model type
+    if config.model_type.lower() == "siglip":
+        model = SigLIPSimilarityModel(device=device)
+    else:  # default to CLIP
+        model = CLIPSimilarityModel(device=device)
     
     # Create data loader
     dataloader = create_dataloader(
@@ -169,16 +173,16 @@ def main():
         if not config.distributed or config.world_size == 1:
             image_paths, captions = download_images(config, logger)
         else:
-            # For distributed training, load existing images
+            # For distributed evaluation, load existing images
             image_paths, captions = load_data(config, logger)
         
-        # Step 2: Launch distributed training using torch.multiprocessing
-        logger.info(f"Launching distributed training with {config.world_size} processes")
+        # Step 2: Launch distributed evaluation using torch.multiprocessing
+        logger.info(f"Launching distributed Evaluation with {config.world_size} processes")
         
         # Convert config to dict for multiprocessing
         config_dict = config.to_dict()
         
-        # Launch distributed training
+        # Launch distributed evaluation
         report = launch_distributed_training(config_dict, image_paths, captions)
         logger.info(f"Report received: {type(report)}")
         

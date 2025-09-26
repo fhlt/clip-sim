@@ -1,12 +1,12 @@
-# CLIP Similarity Evaluation
+# CLIP/SigLIP Similarity Evaluation
 
-A complete pipeline for evaluating CLIP similarity between images and text captions, with support for multi-threaded image downloading and distributed training.
+A complete pipeline for evaluating CLIP and SigLIP similarity between images and text captions, with support for multi-threaded image downloading and distributed evaluation.
 
 ## Features
 
 - **Multi-threaded Image Download**: Download images from URLs in CSV files with configurable worker threads
-- **DDP Support**: Distributed Data Parallel training support for multi-GPU setups
-- **CLIP Integration**: Uses OpenAI's CLIP model for image-text similarity computation
+- **DDP Support**: Distributed Data Parallel evaluation support for multi-GPU setups
+- **Multi-Model Support**: Supports both OpenAI's CLIP and Google's SigLIP models for image-text similarity computation
 - **Comprehensive Evaluation**: Statistical analysis and visualization of similarity results
 - **Flexible Configuration**: Command-line arguments and configuration management
 
@@ -27,42 +27,65 @@ pip install -r requirements.txt
 
 ### Basic Usage
 
-Run the evaluation pipeline with default settings:
+Run the evaluation pipeline with default settings (CLIP model):
 
 ```bash
 python poc.py --csv_path data.csv
+```
+
+Run with SigLIP model:
+
+```bash
+python poc.py --csv_path data.csv --model_type siglip
 ```
 
 ### Advanced Usage
 
 #### Custom Configuration
 ```bash
+# Using CLIP model
 python poc.py \
     --csv_path data.csv \
+    --model_type clip \
+    --batch_size 64 \
+    --max_workers 20 \
+    --output_dir results \
+    --verbose
+
+# Using SigLIP model
+python poc.py \
+    --csv_path data.csv \
+    --model_type siglip \
     --batch_size 64 \
     --max_workers 20 \
     --output_dir results \
     --verbose
 ```
 
-#### Distributed Training with torch.multiprocessing
+#### Distributed Evaluation with torch.multiprocessing
 
 **Method 1: Using the main script**
 ```bash
-# Single GPU
-python poc.py --csv_path data.csv --world_size 1
+# Single GPU with CLIP
+python poc.py --csv_path data.csv --world_size 1 --model_type clip
 
-# Multi-GPU (2 GPUs)
-python poc.py --csv_path data.csv --distributed --world_size 2
+# Single GPU with SigLIP
+python poc.py --csv_path data.csv --world_size 1 --model_type siglip
 
-# Multi-GPU (4 GPUs)
-python poc.py --csv_path data.csv --distributed --world_size 4
+# Multi-GPU (2 GPUs) with CLIP
+python poc.py --csv_path data.csv --distributed --world_size 2 --model_type clip
+
+# Multi-GPU (4 GPUs) with SigLIP
+python poc.py --csv_path data.csv --distributed --world_size 4 --model_type siglip
 ```
 
 **Method 2: Using the DDP script**
 ```bash
-# Multi-GPU processing
-python run_ddp.py --csv_path data.csv --distributed --world_size 2
+# Multi-GPU processing with CLIP
+python run_ddp.py --csv_path data.csv --distributed --world_size 2 --model_type clip
+
+# Multi-GPU processing with SigLIP
+python run_ddp.py --csv_path data.csv --distributed --world_size 2 --model_type siglip
 ```
 
 **Method 3: Using torch.distributed.launch (legacy)**
@@ -124,7 +147,8 @@ https://example.com/image2.jpg,"A cat sitting on a windowsill"
 - `--output_dir`: Output directory for results (default: `outputs`)
 
 ### Model Options
-- `--model_name`: CLIP model name (default: `openai/clip-vit-base-patch32`)
+- `--model_name`: Model name (default: `openai/clip-vit-base-patch32` for CLIP, `google/siglip-base-patch16-224` for SigLIP)
+- `--model_type`: Model type (`clip` or `siglip`, default: `clip`)
 - `--device`: Device to use (`cuda`/`cpu`)
 
 ### Download Options
@@ -171,7 +195,8 @@ clip-sim/
 ├── models/
 │   ├── __init__.py
 │   ├── base_evaluator.py      # Base similarity model class
-│   └── clip_evaluator.py      # CLIP model implementation
+│   ├── clip_evaluator.py      # CLIP model implementation
+│   └── siglip_evaluator.py    # SigLIP model implementation
 ├── utils/
 │   ├── __init__.py
 │   ├── config.py              # Configuration management
@@ -193,13 +218,27 @@ clip-sim/
 
 ### Example 1: Basic Evaluation
 ```bash
-python poc.py --csv_path data.csv --batch_size 16 --verbose
+# Using CLIP model
+python poc.py --csv_path data.csv --batch_size 16 --verbose --model_type clip
+
+# Using SigLIP model
+python poc.py --csv_path data.csv --batch_size 16 --verbose --model_type siglip
 ```
 
 ### Example 2: High-throughput Download
 ```bash
+# Using CLIP model
 python poc.py \
     --csv_path data.csv \
+    --model_type clip \
+    --max_workers 50 \
+    --timeout 60 \
+    --batch_size 64
+
+# Using SigLIP model
+python poc.py \
+    --csv_path data.csv \
+    --model_type siglip \
     --max_workers 50 \
     --timeout 60 \
     --batch_size 64
@@ -207,20 +246,24 @@ python poc.py \
 
 ### Example 3: Distributed Evaluation with torch.multiprocessing
 ```bash
-# Using the main script
-python poc.py --csv_path data.csv --distributed --world_size 4 --batch_size 16
+# Using the main script with CLIP
+python poc.py --csv_path data.csv --distributed --world_size 4 --batch_size 16 --model_type clip
 
-# Using the DDP script
-python run_ddp.py --csv_path data.csv --distributed --world_size 4 --batch_size 16
+# Using the main script with SigLIP
+python poc.py --csv_path data.csv --distributed --world_size 4 --batch_size 16 --model_type siglip
 
-# Using torch.distributed.launch (legacy)
+# Using the DDP script with CLIP
+python run_ddp.py --csv_path data.csv --distributed --world_size 4 --batch_size 16 --model_type clip
+
+# Using torch.distributed.launch (legacy) with SigLIP
 python -m torch.distributed.launch \
     --nproc_per_node=4 \
     poc.py \
     --csv_path data.csv \
     --distributed \
     --world_size 4 \
-    --batch_size 16
+    --batch_size 16 \
+    --model_type siglip
 ```
 
 ### Example 4: Test DDP Examples
@@ -228,6 +271,24 @@ python -m torch.distributed.launch \
 # Run DDP examples
 python example_ddp.py
 ```
+
+## Model Comparison
+
+### CLIP vs SigLIP
+
+| Feature | CLIP | SigLIP |
+|---------|------|--------|
+| **Model Type** | Contrastive Learning | Sigmoid Loss |
+| **Text Length** | 77 tokens | 64 tokens |
+| **Similarity Score** | Cosine similarity (0-1) | Sigmoid probability (0-1) |
+| **Performance** | Good general performance | Often better on specific tasks |
+| **Speed** | Standard | Similar to CLIP |
+| **Use Case** | General image-text matching | When you need probability scores |
+
+### Choosing a Model
+
+- **Use CLIP** (`--model_type clip`): For general image-text similarity tasks, when you need cosine similarity scores
+- **Use SigLIP** (`--model_type siglip`): When you need probability-based scores, or for tasks where SigLIP has shown better performance
 
 ## Performance Tips
 
