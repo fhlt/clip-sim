@@ -32,6 +32,7 @@ from utils.config import Config, get_parser
 from utils.logger import setup_logger
 from utils.evaluator import SimilarityEvaluator
 from utils.gpu_utils import get_gpu_info, print_gpu_info, clear_gpu_cache
+from utils.reproducibility import configure_reproducibility, print_reproducibility_info
 
 def download_images(config: Config, logger: logging.Logger) -> Tuple[List[str], List[str]]:
     """Download images from CSV file"""
@@ -111,7 +112,8 @@ def evaluate_similarities(
         transform=None,
         distributed=config.distributed,
         rank=config.rank,
-        world_size=config.world_size
+        world_size=config.world_size,
+        seed=config.seed
     )
     
     logger.info(f"Created data loader with {len(dataloader)} batches on {device}")
@@ -154,6 +156,14 @@ def main():
     config = Config()
     config.update_from_args(args)
     
+    # Setup reproducibility
+    configure_reproducibility(
+        seed=config.seed,
+        deterministic=config.deterministic,
+        benchmark=config.benchmark,
+        use_deterministic_algorithms=config.use_deterministic_algorithms
+    )
+    
     # Setup logging
     logger = setup_logger(
         name="clip_sim",
@@ -163,6 +173,10 @@ def main():
     
     logger.info("Starting CLIP Similarity Evaluation")
     logger.info(f"Configuration: {config}")
+    
+    # Print reproducibility information
+    if config.verbose:
+        print_reproducibility_info()
     
     # Print GPU information
     if config.verbose:

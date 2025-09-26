@@ -8,8 +8,16 @@ import pandas as pd
 import logging
 from typing import List, Tuple, Optional, Dict, Any
 import torch.distributed as dist
+import random
+import numpy as np
 
 logger = logging.getLogger(__name__)
+
+def worker_init_fn(worker_id):
+    """Initialize worker with reproducible random seed"""
+    worker_seed = torch.initial_seed() % 2**32
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
 
 class CLIPDataset(Dataset):
     """Dataset for CLIP similarity evaluation"""
@@ -74,7 +82,8 @@ def create_dataloader(
     transform=None,
     distributed: bool = False,
     rank: int = 0,
-    world_size: int = 1
+    world_size: int = 1,
+    seed: int = None
 ) -> DataLoader:
     """
     Create DataLoader with optional DDP support
@@ -106,6 +115,9 @@ def create_dataloader(
         )
         shuffle = False  # Don't shuffle when using DistributedSampler
     
+    # Set up worker initialization for reproducibility
+    worker_init = worker_init_fn if seed is not None else None
+    
     dataloader = DataLoader(
         dataset,
         batch_size=batch_size,
@@ -113,7 +125,8 @@ def create_dataloader(
         num_workers=num_workers,
         pin_memory=True,
         sampler=sampler,
-        collate_fn=collate_fn
+        collate_fn=collate_fn,
+        worker_init_fn=worker_init
     )
     
     return dataloader
@@ -254,7 +267,8 @@ def run_distributed_worker(rank: int, world_size: int, config: Dict, image_paths
             transform=None,
             distributed=True,
             rank=rank,
-            world_size=world_size
+            world_size=world_size,
+            seed=config.get('seed', None)
         )
         
         logger.info(f"Worker {rank}: Created data loader with {len(dataloader)} batches")

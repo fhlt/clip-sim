@@ -14,6 +14,7 @@ from data.dataset import launch_distributed_training
 from data.image_downloader import ImageDownloader
 from utils.config import Config, get_parser
 from utils.logger import setup_logger
+from utils.reproducibility import configure_reproducibility, print_reproducibility_info
 
 def main():
     """Main function for DDP execution"""
@@ -23,6 +24,14 @@ def main():
     # Create configuration
     config = Config()
     config.update_from_args(args)
+    
+    # Setup reproducibility
+    configure_reproducibility(
+        seed=config.seed,
+        deterministic=config.deterministic,
+        benchmark=config.benchmark,
+        use_deterministic_algorithms=config.use_deterministic_algorithms
+    )
     
     # Setup logging
     logger = setup_logger(

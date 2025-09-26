@@ -1,0 +1,49 @@
+# CLIP Similarity Evaluation Configuration
+
+# Data paths
+data:
+  csv_path: "data.csv"
+  image_dir: "outputs/images"
+  output_dir: "outputs"
+
+# Model settings
+model:
+  name: "openai/clip-vit-base-patch32"
+  type: "clip"  # "clip" or "siglip"
+  device: "cuda"  # Will be overridden by CUDA_VISIBLE_DEVICES if set
+
+# Download settings
+download:
+  max_workers: 10
+  timeout: 30
+  force_download: false
+
+# Training settings
+training:
+  batch_size: 32
+  num_workers: 4
+  shuffle: true
+
+# Distributed settings
+distributed:
+  enabled: false
+  rank: 0
+  world_size: 1
+  backend: "nccl"
+
+# Evaluation settings
+evaluation:
+  save_results: true
+  results_file: "similarity_results.csv"
+
+# Logging settings
+logging:
+  level: "INFO"
+  verbose: true
+
+# Reproducibility settings
+reproducibility:
+  seed: 42
+  deterministic: true
+  benchmark: false
+  use_deterministic_algorithms: true

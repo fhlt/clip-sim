@@ -146,25 +146,31 @@ class SimilarityEvaluator:
         self, 
         similarities: List[float], 
         image_paths: List[str],
+        captions: List[str],
         max_images: int = 20,
         filename: str = "similarity_heatmap.png"
     ) -> str:
         """
-        Plot similarity heatmap for a subset of images
+        Plot similarity heatmap with text on left and image thumbnails on top
         
         Args:
             similarities: List of similarity scores
             image_paths: List of image paths
+            captions: List of captions
             max_images: Maximum number of images to show
             filename: Output filename
             
         Returns:
             Path to saved plot
         """
+        from PIL import Image
+        import matplotlib.patches as patches
+        
         # Select subset of images
         indices = np.linspace(0, len(similarities) - 1, min(max_images, len(similarities)), dtype=int)
         subset_similarities = [similarities[i] for i in indices]
         subset_paths = [image_paths[i] for i in indices]
+        subset_captions = [captions[i] for i in indices]
         
         # Create similarity matrix (self-similarity for now)
         n = len(subset_similarities)
@@ -178,18 +184,73 @@ class SimilarityEvaluator:
                     # For demonstration, use average of the two similarities
                     similarity_matrix[i, j] = (subset_similarities[i] + subset_similarities[j]) / 2
         
-        plt.figure(figsize=(12, 10))
+        # Create figure with subplots for image thumbnails and heatmap
+        fig = plt.figure(figsize=(16, 12))
+        
+        # Create grid layout
+        gs = fig.add_gridspec(2, 2, height_ratios=[1, 4], width_ratios=[1, 4], hspace=0.3, wspace=0.3)
+        
+        # Top row: Image thumbnails
+        ax_images = fig.add_subplot(gs[0, 1])
+        ax_images.set_xlim(0, n)
+        ax_images.set_ylim(0, 1)
+        ax_images.set_xticks(range(n))
+        ax_images.set_xticklabels([f"Img{i+1}" for i in range(n)], rotation=45, ha='right')
+        ax_images.set_yticks([])
+        ax_images.set_title("Image Thumbnails", fontsize=12, pad=20)
+        
+        # Load and display image thumbnails
+        thumbnail_size = 0.8
+        for i, img_path in enumerate(subset_paths):
+            try:
+                # Load and resize image
+                img = Image.open(img_path)
+                img.thumbnail((50, 50), Image.Resampling.LANCZOS)
+                
+                # Convert to numpy array
+                img_array = np.array(img)
+                
+                # Display image
+                ax_images.imshow(img_array, extent=[i-thumbnail_size/2, i+thumbnail_size/2, 
+                                                  0.1, 0.9], aspect='auto')
+            except Exception as e:
+                # If image can't be loaded, show a placeholder
+                rect = patches.Rectangle((i-thumbnail_size/2, 0.1), thumbnail_size, 0.8, 
+                                       linewidth=1, edgecolor='gray', facecolor='lightgray')
+                ax_images.add_patch(rect)
+                ax_images.text(i, 0.5, '?', ha='center', va='center', fontsize=8)
+        
+        # Left column: Text captions
+        ax_text = fig.add_subplot(gs[1, 0])
+        ax_text.set_xlim(0, 1)
+        ax_text.set_ylim(0, n)
+        ax_text.set_yticks(range(n))
+        ax_text.set_yticklabels([f"Text{i+1}" for i in range(n)])
+        ax_text.set_xticks([])
+        ax_text.set_title("Text Captions", fontsize=12, pad=20)
+        
+        # Display text captions (truncated for readability)
+        for i, caption in enumerate(subset_captions):
+            # Truncate long captions
+            display_caption = caption[:30] + "..." if len(caption) > 30 else caption
+            ax_text.text(0.5, i, display_caption, ha='center', va='center', 
+                        fontsize=8, wrap=True, rotation=0)
+        
+        # Main heatmap
+        ax_heatmap = fig.add_subplot(gs[1, 1])
         sns.heatmap(
             similarity_matrix,
             annot=True,
             fmt='.3f',
             cmap='viridis',
-            xticklabels=[f"Img{i}" for i in range(n)],
-            yticklabels=[f"Img{i}" for i in range(n)]
+            xticklabels=False,
+            yticklabels=False,
+            ax=ax_heatmap,
+            cbar_kws={'label': 'Cosine Similarity'}
         )
-        plt.title('Similarity Heatmap')
-        plt.xlabel('Images')
-        plt.ylabel('Images')
+        ax_heatmap.set_title('Cosine similarity between text and image features', fontsize=14, pad=20)
+        ax_heatmap.set_xlabel('Images', fontsize=12)
+        ax_heatmap.set_ylabel('Text Captions', fontsize=12)
         
         filepath = os.path.join(self.output_dir, filename)
         plt.savefig(filepath, dpi=300, bbox_inches='tight')
@@ -225,7 +286,7 @@ class SimilarityEvaluator:
         
         # Generate plots
         dist_plot = self.plot_similarity_distribution(similarities)
-        heatmap_plot = self.plot_similarity_heatmap(similarities, image_paths)
+        heatmap_plot = self.plot_similarity_heatmap(similarities, image_paths, captions)
         
         report = {
             'metrics': metrics,

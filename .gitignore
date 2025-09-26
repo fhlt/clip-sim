@@ -4,3 +4,4 @@
 __pycache__
 *.tar
 data.csv 
+.ipynb_checkpoints
